@@ -1,0 +1,131 @@
+/* Estilos para el listado de backups */
+#result_list .field-actions_column {
+    white-space: nowrap;
+}
+
+#result_list .field-actions_column a.button {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 0 2px;
+    background: #417690;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+#result_list .field-actions_column a.button:hover {
+    background: #205067;
+}
+
+/* Estilos para los estados */
+.field-status_display .status-pending {
+    color: #ff9800;
+}
+
+.field-status_display .status-completed {
+    color: #4caf50;
+}
+
+.field-status_display .status-failed {
+    color: #f44336;
+}
+
+/* Estilos para el formulario de creación */
+.form-row {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.form-row label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-row input[type="text"],
+.form-row input[type="email"],
+.form-row input[type="password"],
+.form-row input[type="number"],
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.form-row .help {
+    color: #666;
+    font-size: 11px;
+    margin: 5px 0 0;
+}
+
+/* Estilos para los botones de acción */
+.submit-row {
+    padding: 12px 14px 15px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.submit-row input[type="submit"] {
+    background: #417690;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    float: right;
+    margin-left: 10px;
+}
+
+.submit-row input[type="submit"]:hover {
+    background: #205067;
+}
+
+.submit-row a.button {
+    float: right;
+    padding: 10px 15px;
+    background: #999;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+.submit-row a.button:hover {
+    background: #666;
+}
+
+/* Mensajes de alerta */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}

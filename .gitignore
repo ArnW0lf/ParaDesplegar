@@ -1,0 +1,18 @@
+# Node
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+env/
+*.pyc
+
+# Django
+db.sqlite3
+media/
+
+# General
+*.log
+*.zip
+.DS_Store

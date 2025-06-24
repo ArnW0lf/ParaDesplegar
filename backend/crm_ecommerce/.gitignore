@@ -1,0 +1,14 @@
+# Ignorar entorno virtual del backend
+backend/env/
+
+# Ignorar Node modules del frontend
+frontend/node_modules/
+
+# Otros archivos innecesarios
+__pycache__/
+db.sqlite3
+*.pyc
+
+# Opcional
+.vscode/
+.DS_Store

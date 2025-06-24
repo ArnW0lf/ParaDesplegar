@@ -1,0 +1,40 @@
+Django>=5.0
+
+# Django REST Framework para APIs
+ djangorestframework>=3.14
+ djangorestframework-simplejwt>=5.3.0
+
+# CORS Headers para permitir peticiones desde el frontend
+ django-cors-headers>=4.3
+
+# Pillow para manejo de imágenes de productos
+ Pillow>=10.0
+
+# Para conexión con base de datos (usa solo uno dependiendo de tu DB)
+ psycopg2>=2.9  # PostgreSQL
+ mysqlclient>=2.2  # MySQL (si lo usas)
+
+# Para categorías y productos
+ django-filter>=23.5
+
+# Para manejo de archivos grandes y almacenamiento
+ django-storages>=1.13  # Opcional si subes a AWS S3
+
+# Variables de entorno y seguridad
+ python-decouple>=3.8
+
+# Para servir archivos estáticos en producción
+ whitenoise>=6.6
+
+# Para cargar imágenes en formularios de administrador
+ django-cleanup>=7.0
+
+# Opcional pero recomendado para manejo de imágenes de usuarios y productos
+ django-imagekit>=5.0
+
+# Otros complementos útiles
+ gunicorn>=21.2  # Para producción en servidores Linux
+
+# Extras para desarrollo
+ django-debug-toolbar>=4.2  # Solo en desarrollo
+

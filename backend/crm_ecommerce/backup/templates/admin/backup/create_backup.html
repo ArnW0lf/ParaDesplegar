@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url 'admin:backup_backup_changelist' %}">{% trans 'Backups' %}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post" id="backup_form">
+        {% csrf_token %}
+        <div>
+            <fieldset class="module aligned">
+                <h2>Crear nuevo respaldo</h2>
+                <div class="form-row field-user">
+                    <div>
+                        <label for="id_user">Usuario:</label>
+                        <select name="user" required id="id_user" style="width: 100%; padding: 8px;">
+                            <option value="">---------</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.email }} ({{ user.get_full_name|default:user.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row field-description">
+                    <div>
+                        <label for="id_description">Descripción:</label>
+                        <input type="text" name="description" maxlength="255" id="id_description" style="width: 100%;">
+                        <p class="help">Descripción opcional para identificar el respaldo</p>
+                    </div>
+                </div>
+                <div class="form-row field-notes">
+                    <div>
+                        <label for="id_notes">Notas:</label>
+                        <textarea name="notes" id="id_notes" rows="4" style="width: 100%;"></textarea>
+                        <p class="help">Notas adicionales sobre este respaldo</p>
+                    </div>
+                </div>
+            </fieldset>
+            <div class="submit-row">
+                <input type="submit" value="Crear respaldo" class="default" name="_save">
+                <a href="{% url 'admin:backup_backup_changelist' %}" class="button" style="padding: 10px 15px;">Cancelar</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
