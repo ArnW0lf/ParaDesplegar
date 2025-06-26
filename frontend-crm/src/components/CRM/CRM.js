@@ -269,6 +269,7 @@ const CRM = () => {
         try {
             const response = await API.get('leads/');
             const leadsData = response.data;
+            console.log('Datos de leads recibidos:', leadsData);
             
             // Procesar los leads para asegurar que los valores numéricos sean correctos
             const processedLeads = leadsData.map(lead => ({
@@ -284,8 +285,19 @@ const CRM = () => {
             const totalLeads = processedLeads.length;
             const valorTotalPipeline = processedLeads.reduce((sum, lead) => sum + (lead.valor_estimado || 0), 0);
             const valorTotalCompras = processedLeads.reduce((sum, lead) => sum + (lead.valor_total_compras || 0), 0);
-            const promedioCompras = totalLeads > 0 ? 
-                processedLeads.reduce((sum, lead) => sum + (lead.frecuencia_compra || 0), 0) / totalLeads : 0;
+            
+            // Depuración del cálculo del promedio
+            const sumaFrecuencias = processedLeads.reduce((sum, lead) => {
+                const valor = parseFloat(lead.frecuencia_compra) || 0;
+                console.log(`Lead ${lead.id} - Frecuencia:`, lead.frecuencia_compra, 'Valor numérico:', valor);
+                return sum + valor;
+            }, 0);
+            
+            console.log('Suma total de frecuencias:', sumaFrecuencias);
+            console.log('Total de leads:', totalLeads);
+            
+            const promedioCompras = totalLeads > 0 ? sumaFrecuencias / totalLeads : 0;
+            console.log('Promedio calculado:', promedioCompras);
             
             // Contar leads por estado
             const leadsPorEstado = {};

@@ -10,6 +10,7 @@ export default function Cart() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [tiendaId, setTiendaId] = useState(null);
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -55,6 +56,22 @@ export default function Cart() {
   }, []);
 
   // Autenticación + Carrito
+  // Obtener información de la tienda
+  useEffect(() => {
+    const fetchTiendaInfo = async () => {
+      try {
+        const response = await API.get(`tiendas/tiendas/${slug}/public_store/`);
+        setTiendaId(response.data.id);
+      } catch (error) {
+        console.error("Error al obtener información de la tienda:", error);
+      }
+    };
+    
+    if (slug) {
+      fetchTiendaInfo();
+    }
+  }, [slug]);
+
   useEffect(() => {
     const token = localStorage.getItem(tokenKey);
     const auth = !!token;
@@ -190,6 +207,62 @@ export default function Cart() {
         return;
       }
 
+      // 1. Primero, crear/actualizar el lead en el CRM
+      if (tiendaId) {
+        try {
+          const leadData = {
+            nombre: `${formData.nombre} ${formData.apellido}`.trim(),
+            email: formData.correo,
+            telefono: formData.telefono,
+            valor_compra: total.toFixed(2),
+            tienda_id: tiendaId,
+          };
+
+          // Obtener el token de autenticación específico para esta tienda
+          const token = localStorage.getItem(`token_${slug}`);
+          
+          // Hacer la petición con el token de autorización
+          const url = 'leads/crear-desde-tienda/';
+          const config = {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          };
+          
+          // Solo agregar el token si existe
+          if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          console.log('Enviando datos al servidor:', {
+            url,
+            data: leadData,
+            config
+          });
+          
+          // Usar una promesa para manejar la creación del lead de manera asíncrona
+          await API.post(url, leadData, config)
+            .then(response => {
+              console.log('Lead creado/actualizado en el CRM con ID:', response.data?.lead_id);
+            })
+            .catch(error => {
+              console.warn('Error al crear/actualizar lead en CRM:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+              });
+              // Continuar con el flujo a pesar del error
+            });
+        } catch (error) {
+          console.error("Error inesperado al procesar el lead:", error);
+          // Continuar con el flujo a pesar del error
+        }
+      } else {
+        console.warn("No se pudo obtener el ID de la tienda. No se creará/actualizará el lead en el CRM.");
+      }
+
+      // 2. Continuar con el proceso de compra normal
       const payload = {
         usuario: tokenData.user_id,
         nombre: formData.nombre,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FaBox, FaTruck, FaCheck, FaTimes, FaExclamationTriangle, FaSearch, FaFilter, FaCalendarAlt, FaUser, FaMapMarkerAlt, FaPhone, FaCreditCard, FaBarcode } from 'react-icons/fa';
+import ReactPaginate from 'react-paginate';
 import API from '../../api/api';
+import '../../styles/pagination.css';
 
 export default function OrderManagement() {
   const [pedidos, setPedidos] = useState([]);
@@ -9,6 +11,10 @@ export default function OrderManagement() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
   const [pedidoExpandido, setPedidoExpandido] = useState(null);
+  
+  // Estado para la paginación
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 5; // Número de pedidos por página
 
   useEffect(() => {
     fetchPedidos();
@@ -99,6 +105,22 @@ export default function OrderManagement() {
     });
   }, [pedidos, filtroEstado, busqueda]);
 
+  // Lógica para la paginación
+  const pageCount = Math.ceil(pedidosFiltrados.length / itemsPerPage);
+  const offset = currentPage * itemsPerPage;
+  const currentPedidos = pedidosFiltrados.slice(offset, offset + itemsPerPage);
+
+  // Manejador de cambio de página
+  const handlePageClick = (data) => {
+    setCurrentPage(data.selected);
+    window.scrollTo(0, 0); // Opcional: volver al inicio de la página
+  };
+
+  // Reiniciar a la primera página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filtroEstado, busqueda]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -172,11 +194,7 @@ export default function OrderManagement() {
             <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
               <FaBox className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">No hay pedidos</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {filtroEstado === 'todos' && busqueda === '' 
-                  ? 'Aún no hay pedidos en tu tienda. Los pedidos aparecerán aquí cuando los clientes realicen compras.'
-                  : 'No se encontraron pedidos que coincidan con los filtros actuales.'}
-              </p>
+              <p className="text-gray-500">No hay pedidos que coincidan con los filtros actuales.</p>
               {(filtroEstado !== 'todos' || busqueda !== '') && (
                 <button
                   onClick={() => {
@@ -190,11 +208,9 @@ export default function OrderManagement() {
               )}
             </div>
           ) : (
-            pedidosFiltrados.map((pedido) => (
-              <div 
-                key={pedido.id} 
-                className="border rounded-lg p-4 hover:shadow-md transition-all duration-200 bg-white"
-              >
+            <div className="space-y-4">
+              {currentPedidos.map((pedido) => (
+                <div key={pedido.id} className="w-full border rounded-lg p-4 hover:shadow-md transition-all duration-200 bg-white">
                 <div 
                   className="flex justify-between items-start mb-4 cursor-pointer"
                   onClick={() => setPedidoExpandido(pedidoExpandido === pedido.id ? null : pedido.id)}
@@ -221,6 +237,17 @@ export default function OrderManagement() {
                       <div className="flex items-center gap-2">
                         <FaCreditCard className="text-gray-400" />
                         <span>{pedido.metodo_pago_display}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Productos: </span>
+                        {pedido.detalles.map((detalle, index) => (
+                          <span key={detalle.id}>
+                            {index > 0 && ', '}
+                            {detalle.cantidad} x {detalle.nombre_producto || 'Producto sin nombre'}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -251,7 +278,7 @@ export default function OrderManagement() {
                               )}
                               <div>
                                 <span className={`font-medium ${detalle.producto_eliminado ? 'text-gray-500' : ''}`}>
-                                  {detalle.producto_nombre}
+                                  {detalle.nombre_producto}
                                 </span>
                                 {detalle.producto_eliminado && (
                                   <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
@@ -326,8 +353,37 @@ export default function OrderManagement() {
                     </div>
                   </div>
                 )}
-              </div>
-            ))
+                </div>
+              ))}
+              
+              
+              {/* Componente de paginación */}
+              {pageCount > 1 && (
+                <div className="mt-6 flex justify-center">
+                  <ReactPaginate
+                    previousLabel={'Anterior'}
+                    nextLabel={'Siguiente'}
+                    breakLabel={'...'}
+                    pageCount={pageCount}
+                    marginPagesDisplayed={2}
+                    pageRangeDisplayed={3}
+                    onPageChange={handlePageClick}
+                    containerClassName={'pagination'}
+                    activeClassName={'active'}
+                    forcePage={currentPage}
+                    className="flex gap-2 items-center"
+                    pageClassName="page-item"
+                    pageLinkClassName="page-link"
+                    previousClassName="page-item"
+                    previousLinkClassName="page-link"
+                    nextClassName="page-item"
+                    nextLinkClassName="page-link"
+                    breakClassName="page-item"
+                    breakLinkClassName="page-link"
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
