@@ -12,6 +12,7 @@ export default function UserProfile() {
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
+    full_name: "", // Agregamos full_name para manejar la visualización
     email: "",
     preferred_language: "es",
     bio: "",
@@ -30,6 +31,7 @@ export default function UserProfile() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+
   const [profilePicture, setProfilePicture] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const navigate = useNavigate();
@@ -67,9 +69,15 @@ export default function UserProfile() {
 
       if (response.data) {
         setUser(response.data);
+        // Crear full_name combinando first_name y last_name
+        const fullName = [response.data.first_name, response.data.last_name]
+          .filter(Boolean)
+          .join(' ');
+          
         setFormData({
           first_name: response.data.first_name || "",
           last_name: response.data.last_name || "",
+          full_name: fullName, // Establecer el nombre completo
           email: response.data.email || "",
           preferred_language: response.data.preferred_language || "es",
           bio: response.data.bio || "",
@@ -125,6 +133,9 @@ export default function UserProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -132,17 +143,27 @@ export default function UserProfile() {
         return;
       }
 
-      setError(null);
       const formDataToSend = new FormData();
 
-      // Agregar todos los campos del formulario
-      Object.keys(formData).forEach(key => {
-        if (formData[key]) {
-          formDataToSend.append(key, formData[key]);
+      // Crear un objeto con los datos a enviar
+      const dataToSend = { ...formData };
+      
+      // Dividir el nombre completo en first_name y last_name
+      if (dataToSend.full_name) {
+        const nameParts = dataToSend.full_name.trim().split(' ');
+        dataToSend.first_name = nameParts[0] || '';
+        dataToSend.last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+        delete dataToSend.full_name; // Eliminar el campo full_name antes de enviar
+      }
+
+      // Agregar todos los campos al formData
+      Object.keys(dataToSend).forEach(key => {
+        if (dataToSend[key] !== null && dataToSend[key] !== undefined) {
+          formDataToSend.append(key, dataToSend[key]);
         }
       });
 
-      // Si hay una nueva imagen, agregarla
+      // Si hay una imagen de perfil, agregarla
       if (profilePicture) {
         formDataToSend.append('profile_picture', profilePicture);
       }
@@ -152,28 +173,52 @@ export default function UserProfile() {
         formDataToSend,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           }
         }
       );
 
-      if (response.data) {
-        setUser(response.data);
-        setEditMode(false);
-        setProfilePicture(null);
-        // Actualizar la imagen de perfil si se cambió
-        if (response.data.profile_picture) {
-          setPreviewImage(`${config.apiUrl}${response.data.profile_picture}`);
-        }
+      setUser(response.data);
+      setEditMode(false);
+      setProfilePicture(null);
+      
+      // Actualizar la imagen de perfil si se cambió
+      if (response.data.profile_picture) {
+        setPreviewImage(`${config.apiUrl}${response.data.profile_picture}`);
       }
+      
+      alert("Perfil actualizado exitosamente");
+      
+      // Actualizar el localStorage con los nuevos datos del usuario
+      const userResponse = await axios.get(`${config.apiUrl}/api/users/profile/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Actualizar el full_name en el estado local
+      const updatedUser = userResponse.data;
+      const fullName = [updatedUser.first_name, updatedUser.last_name]
+        .filter(Boolean)
+        .join(' ');
+      
+      setFormData(prev => ({
+        ...prev,
+        full_name: fullName,
+        first_name: updatedUser.first_name || "",
+        last_name: updatedUser.last_name || ""
+      }));
+      
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
     } catch (error) {
       console.error("Error al actualizar el perfil:", error);
-      if (error.response) {
-        setError(error.response.data.message || "Error al actualizar el perfil");
-      } else {
-        setError("Error al actualizar el perfil");
-      }
+      const errorMessage = error.response?.data?.detail || 
+                         error.response?.data?.error || 
+                         error.response?.data?.message ||
+                         "Error al actualizar el perfil. Por favor, inténtalo de nuevo.";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -323,27 +368,17 @@ export default function UserProfile() {
           </div>
 
           {/* Información Personal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">Nombre</label>
+              <label className="block text-base font-medium text-gray-700 mb-2">Nombre completo</label>
               <input
                 type="text"
-                name="first_name"
-                value={formData.first_name}
+                name="full_name"
+                value={formData.full_name || ''}
                 onChange={handleInputChange}
                 disabled={!editMode}
                 className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
-              />
-            </div>
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">Apellido</label>
-              <input
-                type="text"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleInputChange}
-                disabled={!editMode}
-                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
+                placeholder="Ingresa tu nombre completo"
               />
             </div>
             <div>
@@ -488,44 +523,50 @@ export default function UserProfile() {
             </div>
 
             {showPasswordForm && (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-base font-medium text-gray-700 mb-2">Contraseña Actual</label>
-                  <input
-                    type="password"
-                    name="current_password"
-                    value={passwordData.current_password}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
-                    required
-                    placeholder="Ingrese su contraseña actual"
-                  />
+                  <div className="relative">
+                    <input
+                      type="password"
+                      name="current_password"
+                      value={passwordData.current_password}
+                      onChange={handlePasswordChange}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
+                      required
+                      placeholder="Ingrese su contraseña actual"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-base font-medium text-gray-700 mb-2">Nueva Contraseña</label>
-                  <input
-                    type="password"
-                    name="new_password"
-                    value={passwordData.new_password}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
-                    required
-                    placeholder="Ingrese su nueva contraseña"
-                    minLength="8"
-                  />
+                  <div className="relative">
+                    <input
+                      type="password"
+                      name="new_password"
+                      value={passwordData.new_password}
+                      onChange={handlePasswordChange}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
+                      required
+                      placeholder="Ingrese su nueva contraseña"
+                      minLength="8"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-base font-medium text-gray-700 mb-2">Confirmar Nueva Contraseña</label>
-                  <input
-                    type="password"
-                    name="confirm_password"
-                    value={passwordData.confirm_password}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
-                    required
-                    placeholder="Confirme su nueva contraseña"
-                    minLength="8"
-                  />
+                  <div className="relative">
+                    <input
+                      type="password"
+                      name="confirm_password"
+                      value={passwordData.confirm_password}
+                      onChange={handlePasswordChange}
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 h-12 text-lg px-4"
+                      required
+                      placeholder="Confirme su nueva contraseña"
+                      minLength="8"
+                    />
+                  </div>
                 </div>
                 {passwordError && (
                   <div className="text-red-600 text-base font-medium">{passwordError}</div>

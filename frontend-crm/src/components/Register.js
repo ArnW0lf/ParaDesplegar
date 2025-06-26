@@ -17,11 +17,62 @@ export default function Register() {
     interest: "Utilizarlo en mi empresa",
     password: "",
     confirmPassword: "",
+    role: "cliente"
   });
 
+  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowPasswordConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Validar contraseña en tiempo real
+  const validatePassword = (password) => {
+    const newErrors = {};
+    if (password.length > 0 && password.length < 8) {
+      newErrors.password = "La contraseña debe tener al menos 8 caracteres";
+    } else {
+      newErrors.password = "";
+    }
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0 || newErrors.password === "";
+  };
+  
+  // Validar coincidencia de contraseñas
+  const validatePasswordMatch = (password, confirmPassword) => {
+    const newErrors = {};
+    if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
+    } else {
+      newErrors.confirmPassword = "";
+    }
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0 || newErrors.confirmPassword === "";
+  };
+  
+  // Validar email
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const newErrors = {};
+    if (email && !re.test(email)) {
+      newErrors.email = "Por favor ingresa un correo electrónico válido";
+    } else {
+      newErrors.email = "";
+    }
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0 || newErrors.email === "";
+  };
+  
+  // Validar campos requeridos
+  const validateRequired = (field, value) => {
+    const newErrors = {};
+    if (!value || value.trim() === "") {
+      newErrors[field] = "Este campo es obligatorio";
+    } else {
+      newErrors[field] = "";
+    }
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0 || newErrors[field] === "";
+  };
 
   const navigate = useNavigate();
 
@@ -43,36 +94,112 @@ export default function Register() {
       }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
+      
+      // Validaciones en tiempo real
+      if (name === "password") {
+        validatePassword(value);
+        if (formData.confirmPassword) {
+          validatePasswordMatch(value, formData.confirmPassword);
+        }
+      } else if (name === "confirmPassword") {
+        validatePasswordMatch(formData.password, value);
+      } else if (name === "email") {
+        validateEmail(value);
+      } else if (["full_name", "username", "company_name"].includes(name)) {
+        validateRequired(name, value);
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (formData.password !== formData.confirmPassword) {
-      alert("Las contraseñas no coinciden.");
+    
+    // Validar todos los campos requeridos
+    const isFullNameValid = validateRequired("full_name", formData.full_name);
+    const isUsernameValid = validateRequired("username", formData.username);
+    const isEmailValid = validateEmail(formData.email);
+    const isCompanyNameValid = validateRequired("company_name", formData.company_name);
+    const isPasswordValid = validatePassword(formData.password);
+    const isPasswordMatch = validatePasswordMatch(formData.password, formData.confirmPassword);
+    
+    // Verificar si hay errores de validación
+    if (!isFullNameValid || !isUsernameValid || !isEmailValid || 
+        !isCompanyNameValid || !isPasswordValid || !isPasswordMatch) {
       setIsLoading(false);
       return;
     }
 
+    // Dividir el nombre completo en first_name y last_name
+    const nameParts = formData.full_name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    // Preparar los datos para enviar al backend
     const dataToSend = {
-      ...formData,
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      first_name: firstName,
+      last_name: lastName,
+      company_name: formData.company_name,
       phone: formData.phonePrefix + formData.phoneNumber,
+      country: formData.country,
+      language: formData.language,
+      company_size: formData.company_size,
+      interest: formData.interest,
+      role: formData.role
     };
 
     try {
+      console.log("Enviando datos al servidor:", JSON.stringify(dataToSend, null, 2));
       const res = await API.post("register/", dataToSend);
+      console.log("Respuesta del servidor:", res.data);
       alert("Usuario registrado exitosamente");
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user)); // Guardar datos del usuario
       navigate("/profile");
     } catch (error) {
+      console.error("Error completo:", error);
       if (error.response) {
-        console.error(error.response.data);
-        alert(`Error en el registro: ${JSON.stringify(error.response.data)}`);
+        console.error("Error en la respuesta:", {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+        
+        let errorMessage = "Error en el registro";
+        
+        // Intentar obtener mensajes de error específicos
+        if (error.response.data) {
+          if (typeof error.response.data === 'object') {
+            // Si hay errores de validación de Django
+            if (error.response.data.detail) {
+              errorMessage = error.response.data.detail;
+            } else {
+              // Recopilar todos los mensajes de error en un solo string
+              const errorMessages = [];
+              for (const [key, value] of Object.entries(error.response.data)) {
+                if (Array.isArray(value)) {
+                  errorMessages.push(`${key}: ${value.join(', ')}`);
+                } else {
+                  errorMessages.push(`${key}: ${value}`);
+                }
+              }
+              errorMessage = errorMessages.join('\n');
+            }
+          } else {
+            errorMessage = error.response.data;
+          }
+        }
+        
+        alert(`Error: ${errorMessage}`);
+      } else if (error.request) {
+        console.error("No se recibió respuesta del servidor:", error.request);
+        alert("No se pudo conectar con el servidor. Verifica tu conexión a internet.");
       } else {
-        console.error("Error:", error.message);
-        alert("Error en la conexión");
+        console.error("Error al configurar la solicitud:", error.message);
+        alert(`Error: ${error.message}`);
       }
     } finally {
       setIsLoading(false);
@@ -106,9 +233,13 @@ export default function Register() {
                   placeholder="Ingresa tu nombre completo"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  onBlur={(e) => validateRequired("full_name", e.target.value)}
+                  className={`w-full px-4 py-3 bg-gray-50 border ${errors.full_name ? 'border-red-500' : 'border-gray-200'} rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
                   required
                 />
+                {errors.full_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
+                )}
               </div>
 
               <div>
@@ -121,9 +252,13 @@ export default function Register() {
                   placeholder="Elige un nombre de usuario"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  onBlur={(e) => validateRequired("username", e.target.value)}
+                  className={`w-full px-4 py-3 bg-gray-50 border ${errors.username ? 'border-red-500' : 'border-gray-200'} rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
                   required
                 />
+                {errors.username && (
+                  <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+                )}
               </div>
             </div>
 
@@ -137,9 +272,13 @@ export default function Register() {
                 placeholder="correo@ejemplo.com"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                onBlur={(e) => validateEmail(e.target.value)}
+                className={`w-full px-4 py-3 bg-gray-50 border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
                 required
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             <div>
@@ -274,19 +413,25 @@ export default function Register() {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="Crea una contraseña"
+                    placeholder="Crea una contraseña (mínimo 8 caracteres)"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    onBlur={(e) => validatePassword(e.target.value)}
+                    className={`w-full px-4 py-3 pr-12 bg-gray-50 border ${errors.password ? 'border-red-500' : 'border-gray-200'} rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
                     required
+                    minLength="8"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
                   </button>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                  )}
                 </div>
               </div>
 
@@ -301,16 +446,21 @@ export default function Register() {
                     placeholder="Confirma tu contraseña"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    onBlur={(e) => validatePasswordMatch(formData.password, e.target.value)}
+                    className={`w-full px-4 py-3 pr-12 bg-gray-50 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'} rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={() => setShowPasswordConfirm(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                    aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
                   </button>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                  )}
                 </div>
               </div>
             </div>
