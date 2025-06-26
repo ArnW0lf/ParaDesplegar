@@ -160,14 +160,16 @@ const Pricing = () => {
                 
                 <div className="mt-8">
                   <p className="text-4xl font-extrabold text-gray-900">
-                    ${billingCycle === 'monthly' ? plan.price : plan.price * 12 * 0.8}
+                    ${billingCycle === 'monthly' 
+                      ? Number(plan.price).toFixed(2) 
+                      : (Number(plan.price) * 12 * 0.8).toFixed(2)}
                     <span className="text-base font-medium text-gray-500">
                       /{billingCycle === 'monthly' ? 'mes' : 'año'}
                     </span>
                   </p>
                   {billingCycle === 'yearly' && (
                     <p className="text-sm text-gray-500 mt-1">
-                      ${plan.price}/mes facturado anualmente
+                      ${Number(plan.price).toFixed(2)}/mes facturado anualmente
                     </p>
                   )}
                 </div>
@@ -224,30 +226,30 @@ const Pricing = () => {
                       </span>
                     </div>
                   )}
-                  <button
-                    onClick={() => handleSubscribe(plan.id, plan.name.toLowerCase().includes('gratis'))}
-                    disabled={loading}
-                    className={`w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
-                      plan.name.toLowerCase().includes('profesional')
-                        ? 'bg-blue-600 hover:bg-blue-700'
-                        : plan.name.toLowerCase().includes('gratis')
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-gray-800 hover:bg-gray-900'
-                    } shadow-sm mt-2`}
-                  >
-                    {loading ? (
-                      'Procesando...'
-                    ) : (
-                      <>
-                        {plan.name.toLowerCase().includes('gratis') 
-                          ? 'Comenzar gratis' 
-                          : user 
-                            ? 'Seleccionar plan' 
-                            : 'Ver detalles'}
-                        <FaArrowRight className="ml-2" />
-                      </>
-                    )}
-                  </button>
+                  {user ? (
+                    <button
+                      onClick={() => handleSubscribe(plan.id, plan.name.toLowerCase().includes('gratis'))}
+                      disabled={loading}
+                      className={`w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
+                        plan.name.toLowerCase().includes('profesional')
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : plan.name.toLowerCase().includes('gratis')
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : 'bg-gray-800 hover:bg-gray-900'
+                      } shadow-sm mt-2`}
+                    >
+                      {loading ? 'Procesando...' : 'Seleccionar plan'}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/register"
+                      state={{ from: '/precios', plan: plan.name.toLowerCase() }}
+                      className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm mt-2"
+                    >
+                      Comenzar ahora
+                    </Link>
+                  )}
+
                 </div>
                 
                 {plan.name.toLowerCase().includes('gratis') ? (
