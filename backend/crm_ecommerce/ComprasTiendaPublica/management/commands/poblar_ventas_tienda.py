@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from UsersTiendaPublica.models import UsersTiendaPublica
 from ComprasTiendaPublica.models import PedidoPublico, DetallePedidoPublico
 from tienda.models import Tienda, Producto
+from payments.models import PaymentMethod
 from django.utils import timezone
 from datetime import timedelta
 import random
@@ -50,11 +51,37 @@ class Command(BaseCommand):
                 # Fecha aleatoria en los últimos 30 días
                 fecha_venta = timezone.now() - timedelta(days=random.randint(0, 30))
                 
+                # Obtener métodos de pago activos para la tienda
+                metodos_pago = list(PaymentMethod.objects.filter(
+                    tienda=tienda,
+                    is_active=True,
+                    status='active'
+                ))
+                
+                if not metodos_pago:
+                    self.stdout.write(self.style.WARNING('  - No hay métodos de pago configurados para esta tienda. Ejecuta primero poblar_metodos_pago.'))
+                    continue
+                    
                 # Crear el pedido
                 try:
                     # Datos de envío ficticios
                     nombre = usuario.first_name or fake.first_name()
                     apellido = usuario.last_name or fake.last_name()
+                    
+                    # Seleccionar un método de pago aleatorio
+                    metodo_pago = random.choice(metodos_pago)
+                    
+                    # Mapear tipos de pago del modelo PaymentMethod a los del PedidoPublico
+                    tipo_pago_map = {
+                        'paypal': 'tarjeta',
+                        'credit_card': 'tarjeta',
+                        'debit_card': 'tarjeta',
+                        'bank_transfer': 'transferencia',
+                        'cash': 'efectivo',
+                        'crypto': 'transferencia'
+                    }
+                    
+                    metodo_pago_pedido = tipo_pago_map.get(metodo_pago.payment_type, 'efectivo')
                     
                     pedido = PedidoPublico.objects.create(
                         codigo_seguimiento=f'PED-{random.randint(1000, 9999)}-{random.randint(100, 999)}',
@@ -68,8 +95,8 @@ class Command(BaseCommand):
                         referencia=fake.sentence(),
                         telefono=fake.phone_number(),
                         correo=usuario.email or f"{nombre.lower()}.{apellido.lower()}@ejemplo.com",
-                        notas=fake.sentence(),
-                        metodo_pago=random.choice(['efectivo', 'tarjeta', 'transferencia']),
+                        notas=f'Instrucciones de pago: {metodo_pago.instructions}',
+                        metodo_pago=metodo_pago_pedido,
                         total=0,  # Se actualizará con los detalles
                         estado=random.choices(
                             ['pendiente', 'confirmado', 'en_proceso', 'enviado', 'entregado', 'cancelado'],
