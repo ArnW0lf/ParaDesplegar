@@ -72,15 +72,19 @@ export default function PublicHeader({
           className="flex items-center gap-2"
         >
           {logo ? (
-            <img
-              src={logo}
-              alt={`Logo de ${storeName}`}
-              className="h-10 w-auto object-contain"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/fallback-logo.png";
-              }}
-            />
+            <div className="h-10 flex items-center">
+              <img
+                src={logo.startsWith('http') ? logo : `${config.apiUrl}${logo}`}
+                alt={`Logo de ${storeName}`}
+                className="h-full w-auto max-w-[200px] object-contain"
+                onError={(e) => {
+                  // If error occurs, replace with store icon
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <FaStore className="hidden text-blue-600 text-2xl" />
+            </div>
           ) : (
             <FaStore className="text-blue-600 text-2xl" />
           )}

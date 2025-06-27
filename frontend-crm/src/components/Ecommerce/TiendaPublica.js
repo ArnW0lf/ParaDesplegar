@@ -654,15 +654,20 @@ export default function TiendaPublica() {
                           key={product.id}
                           className="bg-white rounded-lg shadow p-6 flex flex-col md:flex-row gap-6"
                         >
-                          <img
-                            src={
-                              product.imagen
-                                ? `${config.apiUrl}${product.imagen}`
-                                : "https://via.placeholder.com/300x200?text=Sin+Imagen"
-                            }
-                            alt={product.nombre}
-                            className="w-full md:w-1/3 h-48 object-cover rounded"
-                          />
+                          {product.imagen ? (
+                            <img
+                              src={`${config.apiUrl}${product.imagen}`}
+                              alt={product.nombre}
+                              className="w-full md:w-1/3 h-48 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-full md:w-1/3 h-48 bg-gray-100 rounded flex flex-col items-center justify-center text-gray-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span className="text-sm">Sin imagen</span>
+                            </div>
+                          )}
                           <div className="flex-1">
                             <h3 className="font-bold text-xl mb-1">
                               {product.nombre}
@@ -694,15 +699,20 @@ export default function TiendaPublica() {
                           key={product.id}
                           className="bg-white rounded-lg shadow p-4 break-inside-avoid"
                         >
-                          <img
-                            src={
-                              product.imagen
-                                ? `${config.apiUrl}${product.imagen}`
-                                : "https://via.placeholder.com/300x200?text=Sin+Imagen"
-                            }
-                            alt={product.nombre}
-                            className="w-full object-cover rounded mb-4"
-                          />
+                          {product.imagen ? (
+                            <img
+                              src={`${config.apiUrl}${product.imagen}`}
+                              alt={product.nombre}
+                              className="w-full object-cover rounded mb-4"
+                            />
+                          ) : (
+                            <div className="w-full h-48 bg-gray-100 rounded mb-4 flex flex-col items-center justify-center text-gray-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span className="text-xs">Sin imagen</span>
+                            </div>
+                          )}
                           <h3 className="font-bold text-lg mb-1">
                             {product.nombre}
                           </h3>
@@ -734,15 +744,20 @@ export default function TiendaPublica() {
                           isList ? "flex gap-4 items-center" : ""
                         }`}
                       >
-                        <img
-                          src={
-                            product.imagen
-                              ? `${config.apiUrl}${product.imagen}`
-                              : "https://via.placeholder.com/300x200?text=Sin+Imagen"
-                          }
-                          alt={product.nombre}
-                          className="w-full h-48 object-cover mb-4 rounded"
-                        />
+                        {product.imagen ? (
+                          <img
+                            src={`${config.apiUrl}${product.imagen}`}
+                            alt={product.nombre}
+                            className="w-full h-48 object-cover mb-4 rounded"
+                          />
+                        ) : (
+                          <div className="w-full h-48 bg-gray-100 rounded mb-4 flex flex-col items-center justify-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs">Sin imagen</span>
+                          </div>
+                        )}
                         <h3 className="font-bold text-lg mb-1">
                           {product.nombre}
                         </h3>
