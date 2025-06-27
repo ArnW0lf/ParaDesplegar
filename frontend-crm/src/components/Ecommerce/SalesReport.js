@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import Header from '../common/Header';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,6 +17,14 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+
+const COUNTRY_CURRENCIES = {
+    'Bolivia': { code: 'BOB', symbol: 'Bs', name: 'Boliviano' },
+    'Argentina': { code: 'ARS', symbol: '$', name: 'Peso Argentino' },
+    'Chile': { code: 'CLP', symbol: '$', name: 'Peso Chileno' },
+    'Peru': { code: 'PEN', symbol: 'S/', name: 'Sol Peruano' },
+    'default': { code: 'USD', symbol: '$', name: 'Dólar' }
+};
 
 ChartJS.register(
   CategoryScale,
@@ -28,7 +37,36 @@ ChartJS.register(
 
 export default function SalesReport() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  
+  // Función para formatear moneda según el país del usuario
+  const formatCurrency = (amount) => {
+    const userCountry = user?.country || 'default';
+    console.log('User country in SalesReport:', userCountry); // Debug log
+    const currencyInfo = COUNTRY_CURRENCIES[userCountry] || COUNTRY_CURRENCIES.default;
+    
+    // For BOB and PEN, we'll use custom formatting for better symbol display
+    if (currencyInfo.code === 'BOB') {
+      return `Bs. ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    } else if (currencyInfo.code === 'PEN') {
+      return `S/ ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    }
+    
+    // For other currencies, use Intl.NumberFormat
+    const formatted = new Intl.NumberFormat(
+      userCountry === 'default' ? 'en-US' : `es-${userCountry.substring(0, 2).toUpperCase()}`,
+      {
+        style: 'currency',
+        currency: currencyInfo.code,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        currencyDisplay: 'narrowSymbol'
+      }
+    ).format(amount);
+    
+    return formatted;
+  };
   const [error, setError] = useState(null);
   const [noData, setNoData] = useState(false);
   const [storeConfig, setStoreConfig] = useState(null);
@@ -363,7 +401,7 @@ export default function SalesReport() {
         startY: 70,
         head: [['Métrica', 'Valor']],
         body: [
-          ['Total Ventas', `Bs. ${reportData.totalVentas.toFixed(2)}`],
+          ['Total Ventas', formatCurrency(reportData.totalVentas)],
           ['Total Pedidos', Object.values(reportData.pedidosPorEstado).reduce((a, b) => a + b, 0)],
           ['Productos Vendidos', reportData.productosMasVendidos.reduce((acc, prod) => acc + prod.cantidad, 0)]
         ],
@@ -381,7 +419,7 @@ export default function SalesReport() {
         body: reportData.productosMasVendidos.map(producto => [
           producto.nombre,
           producto.cantidad,
-          `Bs. ${Number(producto.total).toFixed(2)}`
+          formatCurrency(producto.total)
         ]),
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185] }
@@ -469,7 +507,7 @@ export default function SalesReport() {
         ...reportData.productosMasVendidos.map(producto => [
           producto.nombre,
           producto.cantidad,
-          `Bs. ${Number(producto.total).toFixed(2)}`
+          formatCurrency(producto.total)
         ])
       ];
       
@@ -674,7 +712,7 @@ export default function SalesReport() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-blue-600 font-medium">Total Ventas</p>
-                    <h3 className="text-2xl font-bold text-blue-700">Bs. {reportData.totalVentas.toFixed(2)}</h3>
+                    <p className="text-2xl font-bold text-blue-700">{formatCurrency(reportData.totalVentas)}</p>
                   </div>
                   <FaMoneyBillWave className="text-blue-600 text-3xl" />
                 </div>
@@ -741,7 +779,7 @@ export default function SalesReport() {
                               <p className="text-sm text-gray-500">{producto.cantidad} unidades vendidas</p>
                             </div>
                             <p className="font-semibold text-green-600">
-                              Bs. {Number(producto.total).toFixed(2)}
+                              {formatCurrency(producto.total)}
                             </p>
                           </div>
                         ))}
@@ -760,7 +798,7 @@ export default function SalesReport() {
                       {Object.entries(reportData.ventasPorMetodoPago).map(([metodo, total]) => (
                         <div key={metodo} className="bg-gray-50 p-4 rounded-lg">
                           <p className="text-gray-600 font-medium">{metodo}</p>
-                          <p className="text-xl font-bold text-blue-600">Bs. {Number(total).toFixed(2)}</p>
+                          <p className="text-xl font-bold text-blue-600">{formatCurrency(total)}</p>
                         </div>
                       ))}
                     </div>
@@ -773,4 +811,4 @@ export default function SalesReport() {
       </div>
     </div>
   );
-} 
+}

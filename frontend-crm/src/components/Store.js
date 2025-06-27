@@ -15,7 +15,15 @@ import PaymentSettings from './Ecommerce/PaymentSettings';
 import OrderManagement from './Ecommerce/OrderManagement';
 import CreateUserDialog from './Ecommerce/CreateUserDialog';
 import { useAuth } from '../context/AuthContext'; 
-import config from '../config'; 
+import config from '../config';
+
+const COUNTRY_CURRENCIES = {
+    'Bolivia': { code: 'BOB', symbol: 'Bs', name: 'Boliviano' },
+    'Argentina': { code: 'ARS', symbol: '$', name: 'Peso Argentino' },
+    'Chile': { code: 'CLP', symbol: '$', name: 'Peso Chileno' },
+    'Peru': { code: 'PEN', symbol: 'S/', name: 'Sol Peruano' },
+    'default': { code: 'USD', symbol: '$', name: 'Dólar' }
+};
 
 
 
@@ -164,12 +172,30 @@ const fetchStats = async () => {
 
 // Función para formatear números grandes
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+  const userCountry = user?.country || 'default';
+  console.log('User country:', userCountry); // Debug log
+  const currencyInfo = COUNTRY_CURRENCIES[userCountry] || COUNTRY_CURRENCIES.default;
+  
+  // For BOB and PEN, we'll use custom formatting for better symbol display
+  if (currencyInfo.code === 'BOB') {
+    return `Bs. ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  } else if (currencyInfo.code === 'PEN') {
+    return `S/ ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  }
+  
+  // For other currencies, use Intl.NumberFormat
+  const formatted = new Intl.NumberFormat(
+    userCountry === 'default' ? 'en-US' : `es-${userCountry.substring(0, 2).toUpperCase()}`,
+    {
+      style: 'currency',
+      currency: currencyInfo.code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      currencyDisplay: 'narrowSymbol'
+    }
+  ).format(amount);
+  
+  return formatted;
 };
 
 
@@ -448,7 +474,7 @@ const formatCurrency = (amount) => {
           <p className="text-sm text-gray-500 italic mb-2">Categoría: {product.categoria_nombre}</p>
         )}
         <div className="flex justify-between items-center">
-          <p className="font-semibold text-green-600 text-lg">Bs. {product.precio}</p>
+          <p className="font-semibold text-green-600 text-lg">{formatCurrency(parseFloat(product.precio))}</p>
           <p className="text-gray-500 text-sm">Stock: {product.stock}</p>
         </div>
       </div>
