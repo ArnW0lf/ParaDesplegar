@@ -9,7 +9,8 @@ from tenants.utils import get_current_tenant
 from django.core.files.storage import default_storage
 from rest_framework.permissions import AllowAny
 from django.db import transaction
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 class StoreStyleViewSet(viewsets.ModelViewSet):
     """
@@ -74,6 +75,8 @@ class StoreStyleViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data)
             return Response(serializer.errors, status=400)
 
+
+    
     @action(detail=False, methods=['post'], url_path='upload-imagen', permission_classes=[AllowAny])
     def upload_bloque_image(self, request):
         """
@@ -88,6 +91,59 @@ class StoreStyleViewSet(viewsets.ModelViewSet):
 
         return Response({"url": request.build_absolute_uri(file_url)})
 
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([AllowAny])
+def estilo_publico(request, slug):
+    print("🔍 Entró a estilo_publico con slug:", slug)  # <--- agregado
+
+    try:
+        tienda = Tienda.objects.get(slug=slug, publicado=True)
+    except Tienda.DoesNotExist:
+        print("❌ Tienda no encontrada:", slug)
+        return Response({"error": "Tienda no encontrada o no publicada"}, status=404)
+
+    estilo, _ = StoreStyle.objects.get_or_create(tienda=tienda)
+    print("✅ Estilo encontrado o creado para tienda:", tienda.nombre)
+
+    if request.method == 'GET':
+        serializer = StoreStyleSerializer(estilo)
+        return Response(serializer.data)
+
+    elif request.method == 'PATCH':
+        bloques_data = request.data.pop("bloques_bienvenida", None)
+        serializer = StoreStyleSerializer(estilo, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            if bloques_data is not None:
+                with transaction.atomic():
+                    ids_recibidos = []
+                    for bloque_data in bloques_data:
+                        bloque_id = bloque_data.get("id")
+                        bloque_data.pop("style", None)
+
+                        if bloque_id:
+                            try:
+                                bloque = BloqueBienvenida.objects.get(id=bloque_id, style=estilo)
+                                for attr, val in bloque_data.items():
+                                    if attr != "id":
+                                        setattr(bloque, attr, val)
+                                bloque.save()
+                                ids_recibidos.append(bloque.id)
+                            except BloqueBienvenida.DoesNotExist:
+                                pass
+                        else:
+                            nuevo = BloqueBienvenida.objects.create(style=estilo, **bloque_data)
+                            ids_recibidos.append(nuevo.id)
+
+                    estilo.bloques.exclude(id__in=ids_recibidos).delete()
+
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+   
 
 class PublicStoreWithStyleView(APIView):
     """

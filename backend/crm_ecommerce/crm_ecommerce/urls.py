@@ -39,8 +39,8 @@ auth_required_urls = [
     path('api/categories/', include('Category.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/users-public/', include('UsersTiendaPublica.urls')),
-    path('api/compras-public/', include('ComprasTiendaPublica.urls')),
-    path('api/pedidos-publicos/', include('ComprasTiendaPublica.urls')),
+    path('api/', include('ComprasTiendaPublica.urls')),
+
     path('api/', include('leads.urls')),
     path('api/audit-logs/', include('audit_log.urls')),
     path('api/', include('backup.urls')),

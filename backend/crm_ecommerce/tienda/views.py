@@ -11,7 +11,7 @@ from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 from users.permissions import IsSeller
 from users.permissions import IsStockManager
-
+from rest_framework import serializers 
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +101,17 @@ class TiendaViewSet(viewsets.ModelViewSet):
         logger.info("INICIO DE CONFIG")
         logger.info("="*50)
         
-        tenant = get_current_tenant()
+        user = request.user
+        if not hasattr(user, 'tenant') or not user.tenant:
+            logger.warning("Config - Usuario sin tenant asignado")
+            return Response(
+                {"error": "Este usuario no tiene una tienda asignada."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tenant = user.tenant
         logger.info(f"Config - Tenant actual: {tenant}")
+
         logger.info(f"Config - Usuario actual: {request.user.username}")
         logger.info(f"Config - Método: {request.method}")
         logger.info(f"Config - Headers: {request.headers}")
@@ -213,55 +222,30 @@ class TiendaViewSet(viewsets.ModelViewSet):
             logger.info("FIN DE CONFIG")
             logger.info("="*50)
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
-    def public_store(self, request, pk=None):
-        tenant = get_current_tenant()
-        if not tenant:
-            return Response({"error": "No se encontró el tenant"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'], url_path='(?P<slug>[^/.]+)/public_store', permission_classes=[permissions.AllowAny])
+    def public_store(self, request, slug=None):
         try:
-            tienda = Tienda.objects.get(tenant=tenant, slug=pk, publicado=True)
+            tienda = Tienda.objects.get(slug=slug, publicado=True)
             serializer = self.get_serializer(tienda)
             return Response(serializer.data)
         except Tienda.DoesNotExist:
             return Response({"error": "No se encontró la tienda"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
-    def public_products(self, request, pk=None):
-        tenant = get_current_tenant()
-        logger.info(f"Public Products - Tenant actual: {tenant}")
-        if not tenant:
-            logger.warning("Public Products - No se encontró tenant")
-            return Response({"error": "No se encontró el tenant"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'], url_path='(?P<slug>[^/.]+)/public_products', permission_classes=[permissions.AllowAny])
+    def public_products(self, request, slug=None):
         try:
-            logger.info(f"Public Products - Buscando tienda con slug: {pk}")
-            tienda = Tienda.objects.get(tenant=tenant, slug=pk, publicado=True)
-            logger.info(f"Public Products - Tienda encontrada: {tienda.nombre}")
-            
+            tienda = Tienda.objects.get(slug=slug, publicado=True)
             productos = Producto.objects.filter(tienda=tienda)
-            logger.info(f"Public Products - Número de productos encontrados: {productos.count()}")
-            logger.info(f"Public Products - Productos: {[p.nombre for p in productos]}")
-            
             serializer = ProductoSerializer(productos, many=True)
             return Response(serializer.data)
         except Tienda.DoesNotExist:
-            logger.warning(f"Public Products - No se encontró la tienda con slug: {pk}")
             return Response({"error": "No se encontró la tienda"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            logger.error(f"Public Products - Error: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
-    def public_categories(self, request, pk=None):
-        tenant = get_current_tenant()
-        logger.info(f"Public Categories - Tenant actual: {tenant}")
-        if not tenant:
-            logger.warning("Public Categories - No se encontró tenant")
-            return Response({"error": "No se encontró el tenant"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'], url_path='(?P<slug>[^/.]+)/public_categories', permission_classes=[permissions.AllowAny])
+    def public_categories(self, request, slug=None):
+        logger.info(f"Public Categories - Buscando tienda con slug: {slug}")
         try:
-            logger.info(f"Public Categories - Buscando tienda con slug: {pk}")
-            tienda = Tienda.objects.get(tenant=tenant, slug=pk, publicado=True)
+            tienda = Tienda.objects.get(slug=slug, publicado=True)
             logger.info(f"Public Categories - Tienda encontrada: {tienda.nombre}")
             
             categorias = Categoria.objects.filter(tienda=tienda)
@@ -271,11 +255,12 @@ class TiendaViewSet(viewsets.ModelViewSet):
             serializer = CategoriaSerializer(categorias, many=True)
             return Response(serializer.data)
         except Tienda.DoesNotExist:
-            logger.warning(f"Public Categories - No se encontró la tienda con slug: {pk}")
+            logger.warning(f"Public Categories - No se encontró la tienda con slug: {slug}")
             return Response({"error": "No se encontró la tienda"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Public Categories - Error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class CategoriaViewSet(viewsets.ModelViewSet):
     serializer_class = CategoriaSerializer

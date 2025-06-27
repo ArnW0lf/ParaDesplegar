@@ -36,54 +36,76 @@ const Pricing = () => {
     fetchPlans();
   }, []);
 
-  const handleSubscribe = async (planId, isFree = false) => {
-    // Si es un plan gratuito, manejarlo de manera diferente
-    if (isFree) {
-      if (!user) {
-        toast.info('Por favor, regístrate para obtener el plan gratuito');
-        navigate('/register', { state: { from: '/precios', plan: 'free' } });
-      } else {
-        // Aquí podrías manejar la suscripción gratuita directamente
-        toast.info('¡Pronto podrás activar tu plan gratuito!');
-      }
-      return;
-    }
+  const [isProcessing, setIsProcessing] = useState(false);
 
-    // Para planes de pago, verificar autenticación
-    if (!user) {
-      // Guardar el plan seleccionado para después del login
-      localStorage.setItem('selectedPlan', planId);
-      toast.info('Por favor, inicia sesión o regístrate para continuar con el pago');
-      navigate('/login', { 
-        state: { 
-          from: '/precios',
-          message: 'Por favor inicia sesión para continuar con tu suscripción'
-        } 
-      });
-      return;
-    }
-
+  const handleSubscribe = async (plan, isFree = false) => {
+    setIsProcessing(true);
+    
     try {
-      setLoading(true);
-      const response = await API.post('/subscriptions/create-checkout-session/', {
-        plan_id: planId
-      });
-      
-      // Redirigir a Stripe Checkout
-      const stripe = window.Stripe('tu_clave_publica_de_stripe');
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: response.data.sessionId
-      });
-
-      if (error) {
-        throw error;
+      // Si el usuario no está autenticado, redirigir al registro
+      if (!user) {
+        toast.info('Por favor, regístrate para continuar con la suscripción');
+        navigate('/register', { 
+          state: { 
+            from: '/precios', 
+            plan: plan.id,
+            planName: plan.name,
+            isFree
+          } 
+        });
+        return;
       }
+      
+      // Mostrar mensaje de procesamiento
+      const loadingToast = toast.loading('Procesando tu solicitud...');
+      
+      try {
+        // Llamar al endpoint de simulación de pago
+        const response = await API.post('/subscriptions/simulate-payment/', {
+          plan_id: plan.id
+        });
+        
+        // Actualizar el toast con éxito
+        toast.update(loadingToast, {
+          render: isFree 
+            ? '¡Plan gratuito activado exitosamente!'
+            : '¡Suscripción procesada exitosamente!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true
+        });
+        
+        // Redirigir al dashboard o a la página de éxito
+        navigate('/dashboard', { 
+          state: { 
+            subscription: response.data,
+            message: isFree 
+              ? 'Tu plan gratuito ha sido activado exitosamente.'
+              : 'Tu suscripción ha sido procesada exitosamente.'
+          } 
+        });
+        
+      } catch (error) {
+        console.error('Error al procesar la suscripción:', error);
+        
+        // Mostrar mensaje de error
+        toast.update(loadingToast, {
+          render: error.response?.data?.error || 'Error al procesar la suscripción. Por favor, intente nuevamente.',
+          type: 'error',
+          isLoading: false,
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true
+        });
+      }
+      
     } catch (error) {
-      console.error('Error al crear la sesión de pago:', error);
-      const errorMessage = error.response?.data?.error || 'Error al procesar el pago. Por favor, intente nuevamente.';
-      toast.error(errorMessage);
+      console.error('Error inesperado:', error);
+      toast.error('Ocurrió un error inesperado. Por favor, intente nuevamente.');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -226,29 +248,31 @@ const Pricing = () => {
                       </span>
                     </div>
                   )}
-                  {user ? (
-                    <button
-                      onClick={() => handleSubscribe(plan.id, plan.name.toLowerCase().includes('gratis'))}
-                      disabled={loading}
-                      className={`w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
-                        plan.name.toLowerCase().includes('profesional')
-                          ? 'bg-blue-600 hover:bg-blue-700'
-                          : plan.name.toLowerCase().includes('gratis')
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-gray-800 hover:bg-gray-900'
-                      } shadow-sm mt-2`}
-                    >
-                      {loading ? 'Procesando...' : 'Seleccionar plan'}
-                    </button>
-                  ) : (
-                    <Link
-                      to="/register"
-                      state={{ from: '/precios', plan: plan.name.toLowerCase() }}
-                      className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm mt-2"
-                    >
-                      Comenzar ahora
-                    </Link>
-                  )}
+                  <button
+                    onClick={() => handleSubscribe(plan, plan.name.toLowerCase().includes('gratis'))}
+                    disabled={loading || isProcessing}
+                    className={`w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
+                      plan.name.toLowerCase().includes('profesional')
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : plan.name.toLowerCase().includes('gratis') || plan.price === 0
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-gray-800 hover:bg-gray-900'
+                    } shadow-sm mt-2 ${loading || isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {loading || isProcessing ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Procesando...
+                      </>
+                    ) : plan.name.toLowerCase().includes('gratis') || plan.price === 0 ? (
+                      'Comenzar prueba gratuita'
+                    ) : (
+                      'Seleccionar plan'
+                    )}
+                  </button>
 
                 </div>
                 

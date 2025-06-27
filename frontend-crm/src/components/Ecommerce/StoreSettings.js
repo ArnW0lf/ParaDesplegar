@@ -67,7 +67,8 @@ export default function StoreSettings() {
       }
 
       // Configuración de estilo
-      const estiloResponse = await API.get("store-style/mi-estilo/");
+      const estiloResponse = await API.get("store-style/privado/mi-estilo/");
+
       setStyleConfig(estiloResponse.data);
       setEstiloId(estiloResponse.data.id);
 
@@ -123,7 +124,6 @@ export default function StoreSettings() {
         return;
       }
 
-      // Guardar configuración general
       const formData = new FormData();
       if (config.logo instanceof File) {
         formData.append("logo", config.logo);
@@ -174,8 +174,7 @@ export default function StoreSettings() {
         setBloqueTemporal(null);
       }
 
-      // Guardar solo configuración de estilo sin tocar bloques existentes
-      await API.patch("store-style/mi-estilo/", {
+      await API.patch("store-style/privado/mi-estilo/", {
         color_primario: styleConfig.color_primario,
         color_secundario: styleConfig.color_secundario,
         color_texto: styleConfig.color_texto,

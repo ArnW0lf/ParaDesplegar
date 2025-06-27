@@ -39,6 +39,8 @@ class UsersTiendaPublica(AbstractBaseUser, PermissionsMixin):
     objects = UsersTiendaPublicaManager()
 
     USERNAME_FIELD = 'email'
+    EMAIL_FIELD = 'email'
+
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
     def __str__(self):

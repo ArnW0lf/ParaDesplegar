@@ -159,6 +159,48 @@ export default function TiendaPublica() {
     return matchCategory && matchSearch && matchPrice;
   });
 
+  // Vista cuando no hay productos
+  if (products.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col" style={customStyle}>
+        <Header
+          storeName={storeInfo?.nombre}
+          logo={storeInfo?.logo}
+          slug={slug}
+          cartCount={0}
+          colorPrimario={storeStyle?.color_primario}
+        />
+        <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+          <div className="text-center p-8 max-w-3xl mx-auto">
+            <ShoppingBag className="w-24 h-24 text-gray-400 mb-6 mx-auto" />
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">¡Tienda en Construcción!</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+              Lo sentimos, actualmente no hay productos disponibles en nuestra tienda.
+              Estamos trabajando para ofrecerte los mejores productos muy pronto.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 text-white rounded-lg font-medium transition-colors"
+                style={{
+                  backgroundColor: storeStyle?.color_primario || '#3b82f6',
+                }}
+              >
+                Volver a intentar
+              </button>
+              <a
+                href="#"
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                Contáctanos
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen ${

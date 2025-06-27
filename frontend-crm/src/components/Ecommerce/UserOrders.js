@@ -36,74 +36,73 @@ export default function UserOrders() {
     : "bg-white text-gray-800";
   const borderColor = isDark ? "border-gray-700" : "border-gray-200";
 
-  useEffect(() => {
-    const token = localStorage.getItem(`token_${slug}`);
-    if (!token) {
-      navigate(`/tienda-publica/${slug}/login`);
-      return;
-    }
-
-    fetchStoreConfig();
-    fetchOrders();
-  }, [slug]);
-
   const fetchStoreConfig = async () => {
     try {
       const response = await API.get(`tiendas/tiendas/${slug}/public_store/`);
       setStoreConfig(response.data);
 
-      const styleRes = await API.get("store-style/mi-estilo/");
+      const styleRes = await API.get(`store-style/estilos-publicos/${slug}/`);
+
       setStyleConfig(styleRes.data);
     } catch (err) {
       console.error("Error al cargar la configuración de la tienda:", err);
     }
   };
 
-  const fetchOrders = async () => {
+  useEffect(() => {
+    const tokenRaw = localStorage.getItem(`token_${slug}`);
+    const tokenData = tokenRaw ? JSON.parse(tokenRaw) : null;
+
+    console.log("TOKEN GUARDADO:", tokenData);
+
+    if (!tokenData || !tokenData.access || !tokenData.user_id) {
+      console.log("Token no válido o no encontrado");
+      navigate(`/tienda-publica/${slug}/login`);
+      return;
+    }
+
+    // Cargar estilo y datos de tienda
+    fetchStoreConfig();
+
+    // Verificar que el token sea del usuario correcto
+    API.get(`users-public/profile/${tokenData.user_id}/`, {
+      headers: {
+        Authorization: `Bearer ${tokenData.access}`,
+      },
+    })
+      .then((res) => {
+        if (!res?.data?.email) {
+          throw new Error("Perfil inválido");
+        }
+        fetchOrders(tokenData.access); // ✅ cargar pedidos con token correcto
+      })
+      .catch((err) => {
+        console.warn("Token inválido o usuario incorrecto", err);
+        localStorage.removeItem(`token_${slug}`);
+        navigate(`/tienda-publica/${slug}/login`);
+      });
+  }, [slug]);
+
+  const fetchOrders = async (accessToken) => {
     try {
       setLoading(true);
-      const tokenData = JSON.parse(localStorage.getItem(`token_${slug}`));
-      if (!tokenData || !tokenData.user_id) {
-        setError("No se encontró la información del usuario");
-        return;
-      }
 
-      const response = await API.get(`pedidos-publicos/`, {
-        headers: { Authorization: `Bearer ${tokenData}` },
+      const response = await API.get("pedidos-publicos/mis-pedidos/", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
-      const userOrders = response.data.filter(
-        (pedido) =>
-          pedido.usuario === tokenData.user_id && pedido.id && pedido.estado
-      );
-
-      const verifiedOrders = await Promise.all(
-        userOrders.map(async (pedido) => {
-          try {
-            const pedidoResponse = await API.get(
-              `pedidos-publicos/${pedido.id}/`,
-              {
-                headers: { Authorization: `Bearer ${tokenData}` },
-              }
-            );
-            return pedidoResponse.data;
-          } catch (error) {
-            console.error(`Error al verificar pedido ${pedido.id}:`, error);
-            return null;
-          }
-        })
-      );
-
-      const validOrders = verifiedOrders.filter((pedido) => pedido !== null);
-      setOrders(validOrders);
-
-      if (validOrders.length < userOrders.length && retryCount < maxRetries) {
-        setRetryCount((prev) => prev + 1);
-        setTimeout(fetchOrders, 2000);
-      }
+      setOrders(response.data);
     } catch (err) {
-      setError("Error al cargar los pedidos");
-      console.error("Error:", err);
+      console.error("❌ Error:", err);
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem(`token_${slug}`);
+        navigate(`/tienda-publica/${slug}/login`);
+      } else {
+        setError("Error al cargar los pedidos");
+      }
     } finally {
       setLoading(false);
     }

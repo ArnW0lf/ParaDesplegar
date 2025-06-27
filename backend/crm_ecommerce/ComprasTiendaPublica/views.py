@@ -9,6 +9,23 @@ from users.models import CustomUser
 from UsersTiendaPublica.models import UsersTiendaPublica
 from tienda.models import Tienda, Pedido, DetallePedido, Producto
 from tenants.utils import get_current_tenant
+from .permissions import TieneTokenValido
+from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
+
+@api_view(['GET'])
+@permission_classes([TieneTokenValido])
+def mis_pedidos(request):
+    user_id = getattr(request, "user_id_from_token", None)
+    if user_id is None:
+        return Response({"detail": "Token inválido"}, status=403)
+
+    usuario_publico = get_object_or_404(UsersTiendaPublica, id=user_id)
+
+    pedidos = PedidoPublico.objects.filter(usuario=usuario_publico).order_by('-fecha')
+    serializer = PedidoPublicoSerializer(pedidos, many=True)
+    return Response(serializer.data)
+
 
 @api_view(['POST'])
 def agregar_codigo_seguimiento(request, pedido_id):
@@ -53,17 +70,19 @@ class PedidoPublicoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def por_tienda(self, request):
         try:
-            tenant = get_current_tenant()
-            if not tenant:
+            user = request.user
+            if not hasattr(user, 'tenant') or not user.tenant:
                 return Response(
-                    {"error": "No se encontró el tenant"},
+                    {"error": "Este usuario no tiene una tienda asignada."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+            tenant = user.tenant
 
             tienda = Tienda.objects.filter(tenant=tenant).first()
             if not tienda:
                 return Response(
-                    {"error": "No se encontró la tienda asociada al tenant"},
+                    {"error": "No se encontró la tienda asociada al tenant."},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
@@ -71,24 +90,17 @@ class PedidoPublicoViewSet(viewsets.ModelViewSet):
             if not productos_nombres:
                 return Response([])
 
-            # Obtener todos los pedidos de la tienda, independientemente de si los productos existen
             print(f"Buscando pedidos para la tienda: {tienda.id}")
-            pedidos = PedidoPublico.objects.filter(
-                tienda=tienda
-            ).order_by('-fecha')
+            pedidos = PedidoPublico.objects.filter(tienda=tienda).order_by('-fecha')
             
             print(f"Total de pedidos encontrados: {pedidos.count()}")
-            
-            # Imprimir información de cada pedido para depuración
             for pedido in pedidos:
                 print(f"Pedido ID: {pedido.id}, Estado: {pedido.estado}, Fecha: {pedido.fecha}")
                 for detalle in pedido.detalles.all():
                     print(f"  - Producto: {detalle.nombre_producto}, Cantidad: {detalle.cantidad}")
             
             serializer = self.get_serializer(pedidos, many=True)
-            serialized_data = serializer.data
-            print(f"Datos serializados: {serialized_data}")
-            return Response(serialized_data)
+            return Response(serializer.data)
 
         except Exception as e:
             import traceback
@@ -97,6 +109,8 @@ class PedidoPublicoViewSet(viewsets.ModelViewSet):
                 {"error": f"Error interno del servidor: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
 
 
     @action(detail=True, methods=['post'])

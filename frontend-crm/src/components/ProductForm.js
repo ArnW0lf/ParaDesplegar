@@ -15,9 +15,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancel, 
   const [previewImage, setPreviewImage] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-
+  
  useEffect(() => {
   fetchCategories();
 
@@ -64,23 +62,6 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancel, 
     if (file) {
       setFormData((prev) => ({ ...prev, imagen: file }));
       setPreviewImage(URL.createObjectURL(file));
-    }
-  };
-
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    if (!newCategory.trim()) return;
-    try {
-      const response = await API.post('tiendas/categorias/', {
-        nombre: newCategory,
-      });
-      setCategories((prev) => [...prev, response.data]);
-      setFormData((prev) => ({ ...prev, categoria: response.data.id }));
-      setNewCategory('');
-      setShowNewCategoryForm(false);
-      setSuccess('Categoría agregada exitosamente');
-    } catch (err) {
-      setError('Error al agregar la categoría');
     }
   };
 
@@ -182,33 +163,15 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancel, 
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-gray-700">Categoría</label>
-            <button type="button" onClick={() => setShowNewCategoryForm(true)} className="text-blue-600 text-sm flex items-center gap-1">
-              <FaPlus size={12} /> Nueva Categoría
-            </button>
-          </div>
-          {showNewCategoryForm ? (
-            <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold">Agregar Nueva Categoría</h3>
-                <button type="button" onClick={() => setShowNewCategoryForm(false)} className="text-gray-500 hover:text-gray-700">
-                  <FaTimes />
-                </button>
-              </div>
-              <form onSubmit={handleAddCategory} className="flex gap-2">
-                <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Nombre de la categoría" className="flex-1 px-4 py-2 border rounded-lg" required />
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Agregar</button>
-              </form>
-            </div>
-          ) : (
-            <select name="categoria" value={formData.categoria} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
-              <option value="">Seleccionar categoría</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>{category.nombre}</option>
-              ))}
-            </select>
-          )}
+          <label className="block text-gray-700 mb-2">Categoría</label>
+          <select name="categoria" value={formData.categoria} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg">
+            <option value="">Selecciona una categoría</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.nombre}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

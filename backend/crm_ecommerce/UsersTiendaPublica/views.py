@@ -1,16 +1,20 @@
-# UsersTiendaPublica/views.py
-
+# views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UsersTiendaPublicaSerializer
-from .models import UsersTiendaPublica
-from tienda.models import Tienda
-from rest_framework.authtoken.models import Token
+from .serializers import CustomTokenObtainSerializer
 from .serializers import UsersTiendaPublicaSerializer
 from rest_framework.generics import RetrieveUpdateAPIView
+from .models import UsersTiendaPublica
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import TokenPublicUserSerializer
 
-
+class LoginUsersTiendaPublicaView(APIView):
+    def post(self, request):
+        serializer = CustomTokenObtainSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterUsersTiendaPublicaView(APIView):
     def post(self, request):
@@ -21,32 +25,8 @@ class RegisterUsersTiendaPublicaView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LoginUsersTiendaPublicaView(APIView):
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-        slug = request.data.get("slug")
-
-        try:
-            tienda = Tienda.objects.get(slug=slug)
-        except Tienda.DoesNotExist:
-            return Response({'error': 'Tienda no encontrada'}, status=404)
-
-        try:
-            user = UsersTiendaPublica.objects.get(email=email, tienda=tienda)
-        except UsersTiendaPublica.DoesNotExist:
-            return Response({'error': 'Usuario no registrado en esta tienda'}, status=404)
-
-        if not user.check_password(password):
-            return Response({'error': 'Contraseña incorrecta'}, status=400)
-
-        return Response({
-            'message': 'Login exitoso',
-            'email': user.email,
-            'slug': tienda.slug,
-            'user_id': user.id
-        }, status=200)
-    
+class LoginPublicUserView(TokenObtainPairView):
+    serializer_class = TokenPublicUserSerializer    
 
 class UsersTiendaPublicaProfileView(RetrieveUpdateAPIView):
     queryset = UsersTiendaPublica.objects.all()

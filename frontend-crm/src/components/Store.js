@@ -37,6 +37,7 @@ export default function Store() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
   const [success, setSuccess] = useState(null);
+  const [revenuePeriod, setRevenuePeriod] = useState('month'); // 'month' o 'all'
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -119,14 +120,34 @@ const fetchStats = async () => {
       totalProducts: products.length,
       totalOrders: 0,
       totalRevenue: 0,
+      monthlyRevenue: 0,
       lowStock: 0
     };
 
     // Solo cliente y vendedor ven pedidos e ingresos
     if (user?.role === 'cliente' || user?.role === 'vendedor') {
       const pedidosResponse = await API.get('pedidos-publicos/por_tienda/');
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Calcular ingresos totales y del mes actual
       statsData.totalOrders = pedidosResponse.data.length;
-      statsData.totalRevenue = pedidosResponse.data.reduce((acc, pedido) => acc + parseFloat(pedido.total), 0);
+      
+      pedidosResponse.data.forEach(pedido => {
+        const pedidoDate = new Date(pedido.fecha_creacion || pedido.fecha);
+        const pedidoMonth = pedidoDate.getMonth();
+        const pedidoYear = pedidoDate.getFullYear();
+        const monto = parseFloat(pedido.total) || 0;
+        
+        // Sumar a ingresos totales
+        statsData.totalRevenue += monto;
+        
+        // Sumar a ingresos del mes si corresponde
+        if (pedidoMonth === currentMonth && pedidoYear === currentYear) {
+          statsData.monthlyRevenue += monto;
+        }
+      });
     }
 
     // Solo cliente o stock consultan stock bajo
@@ -139,6 +160,16 @@ const fetchStats = async () => {
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
   }
+};
+
+// Función para formatear números grandes
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('es-BO', {
+    style: 'currency',
+    currency: 'BOB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 };
 
 
@@ -241,15 +272,32 @@ const fetchStats = async () => {
       </div>
     )}
 
-    {/* Ingresos Totales - visible para cliente y vendedor */}
+    {/* Ingresos - visible para cliente y vendedor */}
     {(user?.role === 'cliente' || user?.role === 'vendedor') && (
       <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-gray-500">
+            {revenuePeriod === 'month' ? 'Ingresos del Mes' : 'Ingresos Totales'}
+          </p>
+          <button 
+            onClick={() => setRevenuePeriod(prev => prev === 'month' ? 'all' : 'month')}
+            className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600"
+            title={revenuePeriod === 'month' ? 'Ver todos los ingresos' : 'Ver solo este mes'}
+          >
+            {revenuePeriod === 'month' ? 'Ver total' : 'Ver mes actual'}
+          </button>
+        </div>
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-500">Ingresos Totales</p>
-            <h3 className="text-2xl font-bold">Bs. {stats.totalRevenue}</h3>
-          </div>
+          <h3 className="text-2xl font-bold">
+            {formatCurrency(revenuePeriod === 'month' ? stats.monthlyRevenue : stats.totalRevenue)}
+          </h3>
           <FaChartLine className="text-purple-600 text-2xl" />
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          {revenuePeriod === 'month' 
+            ? `Ver total: ${formatCurrency(stats.totalRevenue)}` 
+            : `Este mes: ${formatCurrency(stats.monthlyRevenue)}`
+          }
         </div>
       </div>
     )}

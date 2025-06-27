@@ -42,7 +42,8 @@ export default function ProfileTiendaPublica() {
         });
 
       // Cargar estilo visual
-      API.get("store-style/mi-estilo/")
+      API.get("store-style/estilos-publicos/mitienda/")
+
         .then((res) => setStyleConfig(res.data))
         .catch((err) => console.error("Error al cargar estilo:", err));
     }

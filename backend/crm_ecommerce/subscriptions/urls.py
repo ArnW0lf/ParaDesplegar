@@ -1,6 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PlanViewSet, SubscriptionViewSet, public_plans, BasePlanView
+from .views import (
+    PlanViewSet, 
+    SubscriptionViewSet, 
+    public_plans, 
+    BasePlanView,
+    SimulatePaymentView
+)
 
 # Configuración del router para las vistas que requieren autenticación
 router = DefaultRouter()
@@ -20,6 +26,9 @@ public_urls = [
 urlpatterns = [
     # Incluye todas las rutas del router
     path('', include(router.urls)),
+    
+    # Ruta para simular pagos en modo sandbox
+    path('simulate-payment/', SimulatePaymentView.as_view(), name='simulate-payment'),
 ]
 
 # Agregar URLs públicas al final para que no sean anuladas

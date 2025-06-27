@@ -176,6 +176,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'tenants.middleware.TenantMiddleware',
+    'subscriptions.middleware.SubscriptionMiddleware',  # Verifica la suscripción del tenant
     'audit_log.middleware.AuditLogMiddleware',
 ]
 
@@ -295,6 +296,7 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
+    'AUTHENTICATION_KEY': 'email', 
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -324,3 +326,4 @@ STRIPE_PUBLIC_KEY = 'tu_clave_publica'
 
 # URL del frontend para los enlaces de reseteo
 FRONTEND_URL = 'http://localhost:3000'  # O tu URL de frontend
+ALLOWED_HOSTS = ['*']

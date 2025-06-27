@@ -6,6 +6,8 @@ from .serializers import PaymentMethodSerializer, PaymentTransactionSerializer
 from tenants.utils import get_current_tenant
 from tienda.models import Tienda
 import logging
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 logger = logging.getLogger(__name__)
 
@@ -76,3 +78,14 @@ class PaymentTransactionViewSet(viewsets.ModelViewSet):
             raise permissions.PermissionDenied("No tienes permiso para usar este método de pago")
         
         serializer.save(tenant=tenant) 
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def metodos_pago_publicos(request, slug):
+    try:
+        tienda = Tienda.objects.get(slug=slug, publicado=True)
+        metodos = PaymentMethod.objects.filter(tienda=tienda, is_active=True)
+        serializer = PaymentMethodSerializer(metodos, many=True)
+        return Response(serializer.data)
+    except Tienda.DoesNotExist:
+        return Response({"error": "Tienda no encontrada"}, status=404)

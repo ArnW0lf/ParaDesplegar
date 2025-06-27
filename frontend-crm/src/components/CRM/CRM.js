@@ -286,17 +286,17 @@ const CRM = () => {
             const valorTotalPipeline = processedLeads.reduce((sum, lead) => sum + (lead.valor_estimado || 0), 0);
             const valorTotalCompras = processedLeads.reduce((sum, lead) => sum + (lead.valor_total_compras || 0), 0);
             
-            // Depuración del cálculo del promedio
-            const sumaFrecuencias = processedLeads.reduce((sum, lead) => {
-                const valor = parseFloat(lead.frecuencia_compra) || 0;
-                console.log(`Lead ${lead.id} - Frecuencia:`, lead.frecuencia_compra, 'Valor numérico:', valor);
+            // Cálculo del promedio de compras
+            const sumaTotalCompras = processedLeads.reduce((sum, lead) => {
+                const valor = parseFloat(lead.valor_total_compras) || 0;
+                console.log(`Lead ${lead.id} - Valor total compras:`, lead.valor_total_compras, 'Valor numérico:', valor);
                 return sum + valor;
             }, 0);
             
-            console.log('Suma total de frecuencias:', sumaFrecuencias);
+            console.log('Suma total de compras:', sumaTotalCompras);
             console.log('Total de leads:', totalLeads);
             
-            const promedioCompras = totalLeads > 0 ? sumaFrecuencias / totalLeads : 0;
+            const promedioCompras = totalLeads > 0 ? sumaTotalCompras / totalLeads : 0;
             console.log('Promedio calculado:', promedioCompras);
             
             // Contar leads por estado

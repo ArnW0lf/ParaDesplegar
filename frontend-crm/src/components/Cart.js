@@ -46,7 +46,8 @@ export default function Cart() {
   useEffect(() => {
     const fetchStyle = async () => {
       try {
-        const res = await API.get("store-style/mi-estilo/");
+        const res = await API.get(`store-style/estilos-publicos/${slug}/`);
+
         setStyleConfig(res.data);
       } catch (err) {
         console.error("Error al cargar estilo visual:", err);
@@ -66,7 +67,7 @@ export default function Cart() {
         console.error("Error al obtener información de la tienda:", error);
       }
     };
-    
+
     if (slug) {
       fetchTiendaInfo();
     }
@@ -94,7 +95,8 @@ export default function Cart() {
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       try {
-        const response = await API.get("payments/methods/");
+        const response = await API.get(`payments/metodos-publicos/${slug}/`);
+
         const activos = response.data.filter((m) => m.is_active);
         setPaymentMethods(activos);
         if (activos.length > 0) {
@@ -178,12 +180,11 @@ export default function Cart() {
       const tokenRaw = localStorage.getItem(`token_${slug}`);
       const tokenData = JSON.parse(tokenRaw);
 
-      if (!tokenData?.user_id) {
+      if (!tokenData?.user_id || !tokenData?.access) {
         alert("Sesión inválida. Por favor, inicia sesión nuevamente.");
         return;
       }
 
-      // Preparar detalles del carrito
       const detalles = cartItems.map((item) => ({
         nombre_producto: item.nombre,
         cantidad: item.quantity,
@@ -198,7 +199,6 @@ export default function Cart() {
 
       const total = detalles.reduce((acc, item) => acc + item.subtotal, 0);
 
-      // Validar que el slug no esté vacío
       if (!slug) {
         console.error("Slug de tienda no proporcionado:", slug);
         alert(
@@ -207,7 +207,7 @@ export default function Cart() {
         return;
       }
 
-      // 1. Primero, crear/actualizar el lead en el CRM
+      // 1. Crear/actualizar el lead en CRM
       if (tiendaId) {
         try {
           const leadData = {
@@ -218,51 +218,39 @@ export default function Cart() {
             tienda_id: tiendaId,
           };
 
-          // Obtener el token de autenticación específico para esta tienda
-          const token = localStorage.getItem(`token_${slug}`);
-          
-          // Hacer la petición con el token de autorización
-          const url = 'leads/crear-desde-tienda/';
+          const url = "leads/crear-desde-tienda/";
           const config = {
             headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
-            }
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+              Authorization: `Bearer ${tokenData.access}`, // ✅ CORRECTO
+            },
           };
-          
-          // Solo agregar el token si existe
-          if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          console.log('Enviando datos al servidor:', {
-            url,
-            data: leadData,
-            config
-          });
-          
-          // Usar una promesa para manejar la creación del lead de manera asíncrona
+
           await API.post(url, leadData, config)
-            .then(response => {
-              console.log('Lead creado/actualizado en el CRM con ID:', response.data?.lead_id);
+            .then((response) => {
+              console.log(
+                "Lead creado/actualizado en el CRM con ID:",
+                response.data?.lead_id
+              );
             })
-            .catch(error => {
-              console.warn('Error al crear/actualizar lead en CRM:', {
+            .catch((error) => {
+              console.warn("Error al crear/actualizar lead en CRM:", {
                 message: error.message,
                 response: error.response?.data,
-                status: error.response?.status
+                status: error.response?.status,
               });
-              // Continuar con el flujo a pesar del error
             });
         } catch (error) {
           console.error("Error inesperado al procesar el lead:", error);
-          // Continuar con el flujo a pesar del error
         }
       } else {
-        console.warn("No se pudo obtener el ID de la tienda. No se creará/actualizará el lead en el CRM.");
+        console.warn(
+          "No se pudo obtener el ID de la tienda. No se creará/actualizará el lead en el CRM."
+        );
       }
 
-      // 2. Continuar con el proceso de compra normal
+      // 2. Proceso de compra
       const payload = {
         usuario: tokenData.user_id,
         nombre: formData.nombre,
@@ -278,14 +266,14 @@ export default function Cart() {
         metodo_pago: formData.metodoPago,
         total: total.toFixed(2),
         detalles: detalles,
-        tienda: slug, // Cambiamos 'slug' por 'tienda' para que coincida con lo que espera el backend
+        tienda: slug,
       };
 
       console.log("Sending payload:", payload);
 
       const response = await API.post("pedidos-publicos/", payload, {
         headers: {
-          Authorization: `Bearer ${tokenRaw}`,
+          Authorization: `Bearer ${tokenData.access}`, // ✅ CORREGIDO AQUÍ TAMBIÉN
         },
       });
 
