@@ -70,7 +70,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                 total=Sum('valor_total_compras')
             )['total'] or 0,
             'promedio_compras': leads.aggregate(
-                promedio=Sum('total_compras') / leads.count()
+                promedio=Sum('valor_total_compras') / leads.count()
             )['promedio'] or 0
         })
     

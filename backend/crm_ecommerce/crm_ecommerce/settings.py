@@ -46,9 +46,9 @@ AUDIT_LOG_DIR = os.path.join(BASE_DIR, 'logs/audit')
 os.makedirs(AUDIT_LOG_DIR, exist_ok=True, mode=0o750)
 
 # Configuración de logs de auditoría
-AUDIT_MAX_LOG_SIZE = 10 * 1024 * 1024  # 10MB
-AUDIT_BACKUP_COUNT = 5
-AUDIT_RETENTION_DAYS = 365
+AUDIT_MAX_LOG_SIZE = 20 * 1024 * 1024  # 20MB
+AUDIT_BACKUP_COUNT = 10
+AUDIT_RETENTION_DAYS = 90
 AUDIT_LOG_LEVEL = 'INFO'
 AUDIT_SIGNING_KEY = SECRET_KEY
 AUDIT_SIGNING_SALT = 'audit.log.salt'
@@ -56,7 +56,7 @@ AUDIT_ENABLE_DB_LOGGING = True
 AUDIT_ENABLE_EMAIL_NOTIFICATIONS = not DEBUG
 AUDIT_ADMIN_EMAIL = 'admin@example.com'
 AUDIT_ENABLE_LOG_COMPRESSION = True
-AUDIT_COMPRESSION_LEVEL = 6
+AUDIT_COMPRESSION_LEVEL = 9
 AUDIT_ENABLE_INTEGRITY_CHECKS = True
 AUDIT_CHECKSUM_ALGORITHM = 'sha256'
 AUDIT_ENABLE_EXPORT = True
@@ -66,6 +66,14 @@ AUDIT_SENSITIVE_FIELDS = [
     'password', 'token', 'api_key', 'secret', 'authorization',
     'card_number', 'cvv', 'expiry_date', 'ssn', 'dni'
 ]
+
+# Configuración de rotación de logs
+import datetime
+LOG_ROTATION_WHEN = 'midnight'
+LOG_ROTATION_INTERVAL = 1
+LOG_ROTATION_BACKUP_COUNT = 30
+LOG_ROTATION_UTC = True
+LOG_ROTATION_AT_TIME = datetime.time(0, 0)  # Medianoche
 
 # Configuración de logs
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
@@ -117,6 +125,17 @@ LOGGING = {
             'backupCount': AUDIT_BACKUP_COUNT,
             'formatter': 'audit',
         },
+        'audit_rotating': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(AUDIT_LOG_DIR, 'audit_rotating.log'),
+            'when': LOG_ROTATION_WHEN,
+            'interval': LOG_ROTATION_INTERVAL,
+            'backupCount': LOG_ROTATION_BACKUP_COUNT,
+            'utc': LOG_ROTATION_UTC,
+            'atTime': LOG_ROTATION_AT_TIME,
+            'formatter': 'audit',
+        },
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler',
@@ -131,7 +150,7 @@ LOGGING = {
             'propagate': True,
         },
         'audit': {
-            'handlers': ['audit_file'],
+            'handlers': ['audit_file', 'audit_rotating'],
             'level': 'INFO',
             'propagate': False,
         },
