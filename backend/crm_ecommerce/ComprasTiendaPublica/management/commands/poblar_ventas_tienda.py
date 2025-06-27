@@ -44,12 +44,27 @@ class Command(BaseCommand):
             # Crear entre 5 y 15 ventas por tienda en los últimos 30 días
             num_ventas = random.randint(5, 15)
             
-            for _ in range(num_ventas):
+            # Generar fechas distribuidas en el último mes
+            hoy = timezone.now()
+            fecha_inicio = hoy - timedelta(days=30)
+            
+            # Crear una lista de fechas distribuidas
+            dias = sorted([random.randint(0, 29) for _ in range(num_ventas)])
+            
+            for i in range(num_ventas):
                 # Seleccionar un usuario aleatorio
                 usuario = random.choice(usuarios)
                 
-                # Fecha aleatoria en los últimos 30 días
-                fecha_venta = timezone.now() - timedelta(days=random.randint(0, 30))
+                # Calcular la fecha de venta distribuida en el último mes
+                dias_desde_inicio = dias[i] if i < len(dias) else random.randint(0, 29)
+                fecha_venta = fecha_inicio + timedelta(days=dias_desde_inicio)
+                
+                # Añadir variación de horas, minutos y segundos
+                fecha_venta += timedelta(
+                    hours=random.randint(0, 23),
+                    minutes=random.randint(0, 59),
+                    seconds=random.randint(0, 59)
+                )
                 
                 # Obtener métodos de pago activos para la tienda
                 metodos_pago = list(PaymentMethod.objects.filter(
